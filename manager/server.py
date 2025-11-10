@@ -75,6 +75,22 @@ def login_required(f):
     return decorated_function
 
 
+def permission_service_required(f):
+    """装饰器：确保权限服务已初始化，并将服务存储到 request 对象上"""
+    @functools.wraps(f)
+    async def decorated_function(*args, **kwargs):
+        permission_service = current_app.config.get("PERMISSION_SERVICE")
+        if not permission_service:
+            if request.path.startswith('/admin/api/'):
+                return jsonify({"success": False, "message": "权限服务未初始化"}), 500
+            await flash("权限服务未初始化", "danger")
+            return redirect(url_for("admin_bp.index"))
+        # 将服务存储到 request 对象上，方便视图函数通过 request.permission_service 访问
+        request.permission_service = permission_service
+        return await f(*args, **kwargs)
+    return decorated_function
+
+
 @admin_bp.route("/login", methods=["GET", "POST"])
 async def login():
     if request.method == "POST":
@@ -99,20 +115,18 @@ async def logout():
 
 @admin_bp.route("/")
 @login_required
+@permission_service_required
 async def index():
-    permission_service = current_app.config.get("PERMISSION_SERVICE")
-    plugins = permission_service.get_all_plugins() if permission_service else []
+    permission_service = request.permission_service
+    plugins = permission_service.get_all_plugins()
     return await render_template("index.html", plugins=plugins)
 
 
 @admin_bp.route("/plugin/<plugin_name>")
 @login_required
+@permission_service_required
 async def plugin_detail(plugin_name: str):
-    permission_service = current_app.config.get("PERMISSION_SERVICE")
-    if not permission_service:
-        await flash("权限服务未初始化", "danger")
-        return redirect(url_for("admin_bp.index"))
-    
+    permission_service = request.permission_service
     commands = await permission_service.get_plugin_commands(plugin_name)
     if commands is None:
         await flash(f"未找到插件: {plugin_name}", "danger")
@@ -123,22 +137,18 @@ async def plugin_detail(plugin_name: str):
 
 @admin_bp.route("/api/plugins", methods=["GET"])
 @login_required
+@permission_service_required
 async def api_plugins():
-    permission_service = current_app.config.get("PERMISSION_SERVICE")
-    if not permission_service:
-        return jsonify({"success": False, "message": "权限服务未初始化"}), 500
-    
+    permission_service = request.permission_service
     plugins = permission_service.get_all_plugins()
     return jsonify({"success": True, "data": plugins})
 
 
 @admin_bp.route("/api/plugin/<plugin_name>/commands", methods=["GET"])
 @login_required
+@permission_service_required
 async def api_plugin_commands(plugin_name: str):
-    permission_service = current_app.config.get("PERMISSION_SERVICE")
-    if not permission_service:
-        return jsonify({"success": False, "message": "权限服务未初始化"}), 500
-    
+    permission_service = request.permission_service
     commands = await permission_service.get_plugin_commands(plugin_name)
     if commands is None:
         return jsonify({"success": False, "message": f"未找到插件: {plugin_name}"}), 404
@@ -148,11 +158,9 @@ async def api_plugin_commands(plugin_name: str):
 
 @admin_bp.route("/api/plugin/<plugin_name>/set-permission", methods=["POST"])
 @login_required
+@permission_service_required
 async def api_set_plugin_permission(plugin_name: str):
-    permission_service = current_app.config.get("PERMISSION_SERVICE")
-    if not permission_service:
-        return jsonify({"success": False, "message": "权限服务未初始化"}), 500
-    
+    permission_service = request.permission_service
     data = await request.json
     permission = data.get("permission")
     
@@ -168,11 +176,9 @@ async def api_set_plugin_permission(plugin_name: str):
 
 @admin_bp.route("/api/command/<plugin_name>/<handler_name>/set-permission", methods=["POST"])
 @login_required
+@permission_service_required
 async def api_set_command_permission(plugin_name: str, handler_name: str):
-    permission_service = current_app.config.get("PERMISSION_SERVICE")
-    if not permission_service:
-        return jsonify({"success": False, "message": "权限服务未初始化"}), 500
-    
+    permission_service = request.permission_service
     data = await request.json
     permission = data.get("permission")
     
@@ -188,11 +194,9 @@ async def api_set_command_permission(plugin_name: str, handler_name: str):
 
 @admin_bp.route("/api/command/<plugin_name>/<handler_name>/set-name", methods=["POST"])
 @login_required
+@permission_service_required
 async def api_set_command_name(plugin_name: str, handler_name: str):
-    permission_service = current_app.config.get("PERMISSION_SERVICE")
-    if not permission_service:
-        return jsonify({"success": False, "message": "权限服务未初始化"}), 500
-    
+    permission_service = request.permission_service
     data = await request.json
     new_name = data.get("name")
     
@@ -208,11 +212,9 @@ async def api_set_command_name(plugin_name: str, handler_name: str):
 
 @admin_bp.route("/api/command/<plugin_name>/<handler_name>/set-aliases", methods=["POST"])
 @login_required
+@permission_service_required
 async def api_set_command_aliases(plugin_name: str, handler_name: str):
-    permission_service = current_app.config.get("PERMISSION_SERVICE")
-    if not permission_service:
-        return jsonify({"success": False, "message": "权限服务未初始化"}), 500
-    
+    permission_service = request.permission_service
     data = await request.json
     aliases = data.get("aliases", [])
     
