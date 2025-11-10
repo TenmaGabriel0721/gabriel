@@ -1,0 +1,69 @@
+{
+    "webui": {
+        "description": "Web管理界面配置",
+        "type": "object",
+        "items": {
+            "enabled": {
+                "description": "启用 Web UI 界面",
+                "type": "bool",
+                "hint": "启用后可以启动独立的 Web UI 管理界面。默认值为 true。",
+                "default": true
+            },
+            "secret_key": {
+                "description": "Web UI 的密钥",
+                "type": "string",
+                "hint": "登录管理界面的密钥，建议使用随机字符串。默认值为 'PermissionManager'。",
+                "default": "PermissionManager"
+            },
+            "port": {
+                "description": "Web UI 的端口",
+                "type": "int",
+                "hint": "Web UI 监听的端口号，请确保端口未被占用。默认值为 8888。",
+                "default": 8888
+            },
+            "host": {
+                "description": "Web UI 的主机地址",
+                "type": "string",
+                "hint": "Web UI 监听的主机地址。0.0.0.0 表示监听所有网络接口，127.0.0.1 表示仅本地访问。默认值为 '0.0.0.0'。",
+                "default": "0.0.0.0"
+            }
+        }
+    },
+    "command_enabled": {
+        "description": "启用命令行功能",
+        "type": "bool",
+        "hint": "启用后可以使用 /perm 系列命令管理权限。默认值为 true。",
+        "default": true
+    },
+    "default_permission": {
+        "description": "默认权限类型",
+        "type": "string",
+        "hint": "设置新命令的默认权限类型。可选值：admin（管理员）、member（成员）。默认值为 member。",
+        "default": "member"
+    },
+    "auto_apply_on_load": {
+        "description": "插件加载时自动应用权限",
+        "type": "bool",
+        "hint": "启用后，插件加载时会自动应用已保存的权限配置。默认值为 true。",
+        "default": true
+    },
+    "show_permission_in_help": {
+        "description": "在帮助信息中显示权限状态",
+        "type": "bool",
+        "hint": "启用后，查看插件命令列表时会显示每个命令的权限状态。默认值为 true。",
+        "default": true
+    },
+    "batch_operation_confirm": {
+        "description": "批量操作需要确认",
+        "type": "bool",
+        "hint": "启用后，批量设置权限时需要确认操作。默认值为 true。",
+        "default": true
+    },
+    "log_permission_changes": {
+        "description": "记录权限变更日志",
+        "type": "bool",
+        "hint": "启用后，权限变更会被记录到日志中。默认值为 false。",
+        "default": false
+    }
+}
+
