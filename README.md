@@ -1,4 +1,4 @@
-# permission-manager
+# astrbot_plugin_permission-manager
 
 <div align="center">
 
@@ -238,4 +238,5 @@ git clone https://github.com/your-repo/permission-manager.git
 MIT License
 
 （本插件使用ai编写）
+
 
