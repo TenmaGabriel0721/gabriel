@@ -14,21 +14,6 @@ class PermissionService:
     def __init__(self):
         pass
     
-    def _find_handler(self, plugin_name: str, handler_name: str) -> Optional[StarHandlerMetadata]:
-        """
-        查找指定插件的 handler
-        返回: 找到的 handler 或 None
-        """
-        plugin_commands = self._get_all_commands_by_plugin()
-        if plugin_name not in plugin_commands:
-            return None
-        
-        for handler, cmd_name, cmd_type, is_group in plugin_commands[plugin_name]:
-            if handler.handler_name == handler_name:
-                return handler
-        
-        return None
-    
     def _get_all_commands_by_plugin(self) -> Dict[str, List[tuple]]:
         """
         获取所有插件及其命令列表
@@ -203,11 +188,20 @@ class PermissionService:
     
     async def set_command_permission(self, plugin_name: str, handler_name: str, permission: str) -> Dict[str, Any]:
         """设置单个命令的权限"""
+        plugin_commands = self._get_all_commands_by_plugin()
+        if plugin_name not in plugin_commands:
+            return {"success": False, "message": f"未找到插件: {plugin_name}"}
+        
         if permission not in ["admin", "member"]:
             return {"success": False, "message": "权限类型错误，只能是 admin 或 member"}
         
-        # 使用公共方法查找 handler
-        found_handler = self._find_handler(plugin_name, handler_name)
+        # 查找handler
+        found_handler = None
+        for handler, cmd_name, cmd_type, is_group in plugin_commands[plugin_name]:
+            if handler.handler_name == handler_name:
+                found_handler = handler
+                break
+        
         if not found_handler:
             return {"success": False, "message": f"未找到命令处理器: {handler_name}"}
         
@@ -242,8 +236,17 @@ class PermissionService:
     
     async def set_command_name(self, plugin_name: str, handler_name: str, new_name: str) -> Dict[str, Any]:
         """设置命令名或指令组名"""
-        # 使用公共方法查找 handler
-        found_handler = self._find_handler(plugin_name, handler_name)
+        plugin_commands = self._get_all_commands_by_plugin()
+        if plugin_name not in plugin_commands:
+            return {"success": False, "message": f"未找到插件: {plugin_name}"}
+        
+        # 查找handler
+        found_handler = None
+        for handler, cmd_name, cmd_type, is_group in plugin_commands[plugin_name]:
+            if handler.handler_name == handler_name:
+                found_handler = handler
+                break
+        
         if not found_handler:
             return {"success": False, "message": f"未找到命令处理器: {handler_name}"}
         
@@ -271,25 +274,30 @@ class PermissionService:
     
     async def set_command_aliases(self, plugin_name: str, handler_name: str, aliases: List[str]) -> Dict[str, Any]:
         """设置命令别名列表"""
-        # 在写入时统一类型：确保 aliases 是一个列表，即使是 None 或空值也转换为空列表
-        if aliases is None:
-            aliases = []
-        elif not isinstance(aliases, list):
-            # 如果是其他可迭代类型，转换为列表
-            aliases = list(aliases) if aliases else []
-        # 如果已经是列表，保持不变（包括空列表）
+        plugin_commands = self._get_all_commands_by_plugin()
+        if plugin_name not in plugin_commands:
+            return {"success": False, "message": f"未找到插件: {plugin_name}"}
         
-        # 使用公共方法查找 handler
-        found_handler = self._find_handler(plugin_name, handler_name)
+        # 确保 aliases 是一个列表
+        if not isinstance(aliases, list):
+            aliases = list(aliases) if aliases else []
+        
+        # 查找handler
+        found_handler = None
+        for handler, cmd_name, cmd_type, is_group in plugin_commands[plugin_name]:
+            if handler.handler_name == handler_name:
+                found_handler = handler
+                break
+        
         if not found_handler:
             return {"success": False, "message": f"未找到命令处理器: {handler_name}"}
         
-        # 更新配置 - 确保保存的是列表类型
+        # 更新配置
         alter_cmd_cfg = await sp.global_get("alter_cmd", {})
         plugin_cfg = alter_cmd_cfg.get(plugin_name, {})
         cmd_cfg = plugin_cfg.get(handler_name, {})
-        # 统一保存为列表类型
-        cmd_cfg["aliases"] = aliases
+        # 确保保存的是列表，即使是空列表也要保存
+        cmd_cfg["aliases"] = aliases if aliases else []
         plugin_cfg[handler_name] = cmd_cfg
         alter_cmd_cfg[plugin_name] = plugin_cfg
         await sp.global_put("alter_cmd", alter_cmd_cfg)

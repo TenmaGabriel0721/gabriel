@@ -1,4 +1,4 @@
-# astrbot_plugin_permission-manager
+# permission-manager
 
 <div align="center">
 
@@ -25,14 +25,14 @@ _✨ AstrBot 批量权限管理插件 ✨_
 
 ### 方式一：从插件市场安装（推荐）
 
-在 AstrBot 的插件市场中搜索 `astrbot_plugin_permission-manager`，点击安装即可。
+在 AstrBot 的插件市场中搜索 `permission-manager`，点击安装即可。
 
 ### 方式二：手动安装
 
 ```bash
 # 克隆仓库到插件目录
 cd /path/to/AstrBot/data/plugins
-git clone https://github.com/TenmaGabriel0721/astrbot_plugin_permission-manager.git
+git clone https://github.com/your-repo/permission-manager.git
 
 # 重启 AstrBot
 ```
@@ -227,6 +227,14 @@ git clone https://github.com/TenmaGabriel0721/astrbot_plugin_permission-manager.
    - `port`: Web UI 端口（默认：8888）
    - `host`: 监听地址（默认：0.0.0.0，表示所有网络接口）
 
+### AstrBot 主 Web UI 配置
+
+AstrBot 主 Web UI 的端口在主配置中设置：
+
+1. **配置文件位置**：`data/cmd_config.json`
+2. **配置项**：`dashboard.port`（默认值：6185）
+
+**注意**：独立 Web UI 和 AstrBot 主 Web UI 是分开的，可以同时使用。
 
 ## 🔗 相关链接
 
@@ -236,11 +244,4 @@ git clone https://github.com/TenmaGabriel0721/astrbot_plugin_permission-manager.
 ## 📄 许可证
 
 MIT License
-
-## 声明：
-本插件使用ai编写
-
-
-
-
 
