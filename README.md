@@ -13,6 +13,7 @@ _✨ AstrBot 批量权限管理插件 ✨_
 ## 🤝 介绍
 
 批量权限管理插件，提供便捷的批量权限设置功能。对于有几十个命令的插件，不再需要一个个设置权限，一键批量设置整个插件的所有命令权限。
+支持使用webui修改指令名/别名。
 
 **主要特性：**
 - ✅ **批量操作**：一键批量设置整个插件的所有命令权限
@@ -227,14 +228,6 @@ git clone https://github.com/your-repo/permission-manager.git
    - `port`: Web UI 端口（默认：8888）
    - `host`: 监听地址（默认：0.0.0.0，表示所有网络接口）
 
-### AstrBot 主 Web UI 配置
-
-AstrBot 主 Web UI 的端口在主配置中设置：
-
-1. **配置文件位置**：`data/cmd_config.json`
-2. **配置项**：`dashboard.port`（默认值：6185）
-
-**注意**：独立 Web UI 和 AstrBot 主 Web UI 是分开的，可以同时使用。
 
 ## 🔗 相关链接
 
@@ -244,4 +237,5 @@ AstrBot 主 Web UI 的端口在主配置中设置：
 ## 📄 许可证
 
 MIT License
+
 
