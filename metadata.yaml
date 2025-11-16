@@ -1,7 +1,7 @@
 name: permission-manager
 desc: 批量权限管理插件，支持批量设置和管理命令权限，提供命令行和Web UI两种管理方式
 author: Auto
-version: 1.1.0
+version: 1.1.1
 help: |
   命令列表：
   - /perm list - 列出所有已启用的插件及其命令数量
@@ -16,5 +16,6 @@ help: |
   - 支持命令行和Web UI两种管理方式
   - 与原有的 /alter_cmd 命令完全兼容
   - 设置后立即生效，无需重启
+
 
 
