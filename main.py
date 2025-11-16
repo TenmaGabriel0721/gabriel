@@ -691,10 +691,112 @@ class Main(star.Star):
     
     async def initialize(self):
         """插件初始化方法，在插件加载后自动调用"""
+        # 如果启用了自动应用配置，从 alter_cmd 配置中加载并应用到所有 handler
+        if self.auto_apply_on_load:
+            await self._apply_config_to_handlers()
+        
         # 如果 Web UI 已启用，自动启动
         if self.webui_enabled:
             # 使用 asyncio.create_task 在后台启动 Web UI
             asyncio.create_task(self._auto_start_webui())
+    
+    async def _apply_config_to_handlers(self):
+        """从 alter_cmd 配置中加载并应用到所有 handler 的过滤器"""
+        try:
+            alter_cmd_cfg = await sp.global_get("alter_cmd", {})
+            if not alter_cmd_cfg:
+                return
+            
+            applied_count = 0
+            
+            # 遍历所有已注册的 handler
+            for handler in star_handlers_registry:
+                assert isinstance(handler, StarHandlerMetadata)
+                if handler.handler_module_path not in star_map:
+                    continue
+                
+                plugin = star_map[handler.handler_module_path]
+                if not plugin.activated:
+                    continue
+                
+                plugin_name = plugin.name
+                handler_name = handler.handler_name
+                
+                # 获取该插件的配置
+                plugin_cfg = alter_cmd_cfg.get(plugin_name, {})
+                cmd_cfg = plugin_cfg.get(handler_name, {})
+                
+                if not cmd_cfg:
+                    continue
+                
+                # 查找命令过滤器或指令组过滤器
+                command_filter = None
+                command_group_filter = None
+                for event_filter in handler.event_filters:
+                    if isinstance(event_filter, CommandFilter):
+                        command_filter = event_filter
+                        break
+                    elif isinstance(event_filter, CommandGroupFilter):
+                        command_group_filter = event_filter
+                        break
+                
+                if not command_filter and not command_group_filter:
+                    continue
+                
+                # 应用命令名/指令组名
+                if "name" in cmd_cfg:
+                    new_name = cmd_cfg["name"]
+                    if command_filter:
+                        command_filter.command_name = new_name
+                        command_filter._cmpl_cmd_names = None  # 清除缓存
+                    elif command_group_filter:
+                        command_group_filter.group_name = new_name
+                        command_group_filter._cmpl_cmd_names = None  # 清除缓存
+                
+                # 应用别名
+                if "aliases" in cmd_cfg:
+                    aliases = cmd_cfg["aliases"]
+                    # 确保 aliases 是列表类型
+                    if aliases is None:
+                        aliases = []
+                    elif not isinstance(aliases, list):
+                        aliases = list(aliases) if aliases else []
+                    
+                    if command_filter:
+                        command_filter.alias = set(aliases)
+                        command_filter._cmpl_cmd_names = None  # 清除缓存
+                    elif command_group_filter:
+                        command_group_filter.alias = set(aliases)
+                        command_group_filter._cmpl_cmd_names = None  # 清除缓存
+                
+                # 应用权限（虽然框架可能会自动应用，但为了确保一致性，我们也应用一下）
+                if "permission" in cmd_cfg:
+                    permission = cmd_cfg["permission"]
+                    if permission in ["admin", "member"]:
+                        found_permission_filter = False
+                        for event_filter in handler.event_filters:
+                            if isinstance(event_filter, PermissionTypeFilter):
+                                if permission == "admin":
+                                    event_filter.permission_type = PermissionType.ADMIN
+                                else:
+                                    event_filter.permission_type = PermissionType.MEMBER
+                                found_permission_filter = True
+                                break
+                        
+                        if not found_permission_filter:
+                            handler.event_filters.append(
+                                PermissionTypeFilter(
+                                    PermissionType.ADMIN if permission == "admin" else PermissionType.MEMBER
+                                )
+                            )
+                
+                applied_count += 1
+            
+            if self.log_permission_changes and applied_count > 0:
+                logger.info(f"已从配置中加载并应用到 {applied_count} 个命令处理器")
+        
+        except Exception as e:
+            logger.error(f"加载 alter_cmd 配置时出错: {e}", exc_info=True)
 
     @filter.command_group("perm")
     def perm(self):
