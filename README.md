@@ -1,4 +1,4 @@
-# permission-manager
+# astrbot_plugin_permission-manager
 
 <div align="center">
 
@@ -26,14 +26,14 @@ _✨ AstrBot 批量权限管理插件 ✨_
 
 ### 方式一：从插件市场安装（推荐）
 
-在 AstrBot 的插件市场中搜索 `permission-manager`，点击安装即可。
+在 AstrBot 的插件市场中搜索 `astrbot_plugin_permission-manager`，点击安装即可。
 
 ### 方式二：手动安装
 
 ```bash
 # 克隆仓库到插件目录
 cd /path/to/AstrBot/data/plugins
-git clone https://github.com/your-repo/permission-manager.git
+git clone https://github.com/your-repo/astrbot_plugin_permission-manager.git
 
 # 重启 AstrBot
 ```
@@ -237,5 +237,6 @@ git clone https://github.com/your-repo/permission-manager.git
 ## 📄 许可证
 
 MIT License
+
 
 
