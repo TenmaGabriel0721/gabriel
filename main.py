@@ -685,6 +685,7 @@ class Main(star.Star):
         
         self.perm_cmd = PermissionManagerCommands(context)
         self.webui_server: PermissionWebUIServer | None = None
+        self._monitor_task: Optional[asyncio.Task] = None
         
         if self.log_permission_changes:
             logger.info(f"权限管理插件已加载 - Web UI: {self.webui_enabled} (端口: {self.webui_port}), 命令行: {self.command_enabled}")
@@ -694,6 +695,8 @@ class Main(star.Star):
         # 如果启用了自动应用配置，从 alter_cmd 配置中加载并应用到所有 handler
         if self.auto_apply_on_load:
             await self._apply_config_to_handlers()
+            # 启动后台监控任务，定期检查并应用配置，确保插件重载后配置仍然生效
+            self._monitor_task = asyncio.create_task(self._monitor_and_apply_config())
         
         # 如果 Web UI 已启用，自动启动
         if self.webui_enabled:
@@ -797,6 +800,67 @@ class Main(star.Star):
         
         except Exception as e:
             logger.error(f"加载 alter_cmd 配置时出错: {e}", exc_info=True)
+    
+    async def _monitor_and_apply_config(self):
+        """后台监控任务，定期检查并应用配置，确保插件重载后配置仍然生效"""
+        # 记录已处理的 handler 标识（插件名+handler名），用于检测是否有新的 handler 注册
+        last_handler_signatures = set()
+        check_interval = 2  # 检查间隔（秒）
+        apply_interval = 30  # 定期应用配置间隔（秒）
+        last_full_apply = 0
+        
+        import time
+        
+        while True:
+            try:
+                await asyncio.sleep(check_interval)
+                current_time = time.time()
+                
+                # 获取当前所有 handler 的签名（插件名:handler名）
+                current_handler_signatures = set()
+                for handler in star_handlers_registry:
+                    assert isinstance(handler, StarHandlerMetadata)
+                    if handler.handler_module_path not in star_map:
+                        continue
+                    plugin = star_map[handler.handler_module_path]
+                    if not plugin.activated:
+                        continue
+                    signature = f"{plugin.name}:{handler.handler_name}"
+                    current_handler_signatures.add(signature)
+                
+                # 如果 handler 集合发生变化，或者达到定期应用时间，重新应用配置
+                should_apply = False
+                
+                # 检查是否有新的 handler（handler 签名不在上次记录中）
+                if current_handler_signatures != last_handler_signatures:
+                    new_handlers = current_handler_signatures - last_handler_signatures
+                    removed_handlers = last_handler_signatures - current_handler_signatures
+                    if new_handlers or removed_handlers:
+                        should_apply = True
+                        if self.log_permission_changes:
+                            if new_handlers:
+                                logger.debug(f"检测到 {len(new_handlers)} 个新注册的 handler，将重新应用配置")
+                            if removed_handlers:
+                                logger.debug(f"检测到 {len(removed_handlers)} 个 handler 被移除（可能正在重载），将重新应用配置")
+                        # 等待一小段时间，确保插件重载完成
+                        await asyncio.sleep(1)
+                
+                # 定期重新应用配置（即使 handler 没有变化，也要确保配置生效）
+                if current_time - last_full_apply >= apply_interval:
+                    should_apply = True
+                    last_full_apply = current_time
+                
+                if should_apply and self.auto_apply_on_load:
+                    await self._apply_config_to_handlers()
+                
+                # 更新记录的 handler 签名集合
+                last_handler_signatures = current_handler_signatures
+                        
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"监控配置应用任务出错: {e}", exc_info=True)
+                await asyncio.sleep(5)  # 出错后等待更长时间再重试
 
     @filter.command_group("perm")
     def perm(self):
@@ -1082,6 +1146,18 @@ class Main(star.Star):
     
     async def terminate(self):
         """插件被卸载/停用时调用"""
+        # 停止监控任务
+        if self._monitor_task and not self._monitor_task.done():
+            self._monitor_task.cancel()
+            try:
+                await self._monitor_task
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                logger.error(f"停止监控任务时出错: {e}", exc_info=True)
+            self._monitor_task = None
+        
+        # 停止 Web UI 服务
         if self.webui_server and self.webui_server.is_running:
             try:
                 await self.webui_server.stop()
